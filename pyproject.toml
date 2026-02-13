@@ -1,0 +1,20 @@
+[project]
+name = "gait-stim"
+version = "0.0.1"
+description = "MVP: video->pose->psi->controller->stim (stubs, plugin-ready)"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "opencv-python",
+  "PyQt6",
+  "pyqtgraph"
+]
+
+[project.optional-dependencies]
+yolo = ["ultralytics"]  # потом подключу YOLO
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

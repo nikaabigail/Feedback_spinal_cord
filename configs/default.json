@@ -1,0 +1,30 @@
+{
+  "video": {
+    "source": "opencv_dual",
+    "width": 1280,
+    "height": 720,
+    "cameras": [
+      { "name": "control", "index": 0 },
+      { "name": "experimental", "index": 0 }
+    ]
+  },
+  "pose": {
+    "backend": "yolo_stub"
+  },
+  "emg": {
+    "backend": "mock_emg"
+  },
+  "psi": {
+    "backend": "manual_psi",
+    "initial_value": 0.0
+  },
+  "controller": {
+    "backend": "rule_based",
+    "stim_channels": 4,
+    "amp_min": 0.0,
+    "amp_max": 5.0
+  },
+  "stim": {
+    "backend": "mock_stim"
+  }
+}
