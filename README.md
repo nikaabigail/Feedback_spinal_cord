@@ -1,9 +1,9 @@
-# gait-stim (MVP)
+# Стимуляция спинного мозга (MVP)
 
 MVP-пайплайн для экспериментов с замкнутым контуром стимуляции походки:
-две "камеры" (Control/Experimental) → pose (YOLO stub) → kinematics/Ψ (пока вручную) → параметры стимуляции (4+ каналов) + EMG placeholder.
+две "камеры" (Control/Experimental) - pose (YOLO stub) - kinematics/Ψ (пока вручную) - параметры стимуляции (4+ каналов) + EMG placeholder.
 
-## Install (Windows)
+## Установка под Windows
 
 ```powershell
 python -m venv .venv
