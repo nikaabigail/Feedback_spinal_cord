@@ -20,8 +20,6 @@ _MODULES = [
     "gait_stim.modules.controller.rule_based",
     # stim
     "gait_stim.modules.stim.mock_stim",
-    # imu
-    "gait_stim.modules.imu.mock_imu",
     # emg (пока не используется в пайплайне, но пусть регистрируется)
     "gait_stim.modules.emg.mock_emg",
 ]
