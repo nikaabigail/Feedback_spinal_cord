@@ -1,11 +1,9 @@
 from __future__ import annotations
 from typing import Optional
-import time
 
 from .bus import Bus
 from .config import Config
 from .plugin import create
-from .types import VideoFrame, PoseFrame, KinematicsFrame, PsiValue, StimParams
 from .bootstrap import bootstrap_plugins
 
 class Pipeline:
@@ -14,9 +12,10 @@ class Pipeline:
         self.cfg = cfg
         self.bus = bus or Bus()
 
-        self.video = create("video", cfg.get("video", "source"), cfg=cfg)
+        self.video = create("video", cfg.get("video", "source"), cfg=cfg, bus=self.bus)
         self.pose  = create("pose",  cfg.get("pose", "backend"), cfg=cfg)
         self.kin   = create("kin",   "simple_kin", cfg=cfg)
+        self.imu   = create("imu",   cfg.get("imu", "backend", default="mock_imu"), cfg=cfg)
         self.psi   = create("psi",   cfg.get("psi", "backend"), cfg=cfg, bus=self.bus)
         self.ctrl  = create("ctrl",  cfg.get("controller", "backend"), cfg=cfg)
         self.stim  = create("stim",  cfg.get("stim", "backend"), cfg=cfg, bus=self.bus)
@@ -36,6 +35,10 @@ class Pipeline:
             pf = self.pose.infer(vf)
             poses[name] = pf
             self.bus.publish(f"pose.frame.{name}", pf)
+
+        for name, pf in poses.items():
+            imu = self.imu.compute(pf, source=name)
+            self.bus.publish(f"imu.value.{name}", imu)
 
         # MVP: дальше берем experimental как “рабочий” поток (так проще)
         pf_exp = poses.get("experimental") or next(iter(poses.values()))
