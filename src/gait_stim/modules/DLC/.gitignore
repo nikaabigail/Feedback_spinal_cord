@@ -1,0 +1,19 @@
+# DLC heavy artifacts / datasets / videos
+dlc-models/
+evaluation-results/
+labeled-data/
+training-datasets/
+videos/
+
+# common junk
+__pycache__/
+*.pyc
+*.pkl
+*.h5
+*.mp4
+*.avi
+*.mov
+*.zip
+*.tar
+*.tar.gz
+*.7z
