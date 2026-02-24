@@ -1,33 +1,57 @@
 # src/gait_stim/gui/app.py
 from __future__ import annotations
 
+from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QHBoxLayout, QVBoxLayout, QSplitter, QSizePolicy
 )
-from PyQt6.QtCore import QTimer, Qt
+import pyqtgraph as pg
 
-from ..core.config import Config
 from ..core.bus import Bus
+from ..core.config import Config
 from ..core.pipeline import Pipeline
 
-from .video_view import VideoView, draw_pose
-from .stim_view import StimView
 from .controls import Controls
+from .stim_view import StimView
+from .video_view import VideoView, draw_pose
 
 
-class EmgView(QWidget):
-    """Заглушка под EMG. Потом заменим на реальную визуализацию."""
+class ImuView(QWidget):
+    """Черновой IMU-график для двух потоков видео."""
+
     def __init__(self) -> None:
         super().__init__()
+        self._max_len = 200
+        self.ctrl: list[float] = []
+        self.exp: list[float] = []
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
-        title = QLabel("EMG (placeholder)")
+        title = QLabel("IMU (draft): control / experimental")
         title.setStyleSheet("font-weight: 600;")
-        hint = QLabel("Пока пусто. Позже: сигналы 1..4, фильтры, амплитуда, события.")
-        hint.setStyleSheet("color: #888;")
         layout.addWidget(title)
-        layout.addWidget(hint)
-        layout.addStretch(1)
+
+        self.plot = pg.PlotWidget()
+        self.plot.setMenuEnabled(False)
+        self.plot.showGrid(x=True, y=True, alpha=0.2)
+        self.plot.addLegend()
+        self.curve_ctrl = self.plot.plot([], [], pen=pg.mkPen("#4caf50", width=2), name="control")
+        self.curve_exp = self.plot.plot([], [], pen=pg.mkPen("#ff9800", width=2), name="experimental")
+        layout.addWidget(self.plot)
+
+    def update_control(self, v: float) -> None:
+        self.ctrl.append(float(v))
+        self.ctrl = self.ctrl[-self._max_len:]
+        self._refresh()
+
+    def update_experimental(self, v: float) -> None:
+        self.exp.append(float(v))
+        self.exp = self.exp[-self._max_len:]
+        self._refresh()
+
+    def _refresh(self) -> None:
+        self.curve_ctrl.setData(range(len(self.ctrl)), self.ctrl)
+        self.curve_exp.setData(range(len(self.exp)), self.exp)
 
 
 class App(QWidget):
@@ -39,21 +63,17 @@ class App(QWidget):
         self.bus = Bus()
         self.pipeline = Pipeline(cfg, bus=self.bus)
 
-        # --- widgets
         self.video_control = VideoView()
         self.video_experimental = VideoView()
-
-        # камеры уменьшаем: ограничиваем высоту области видео
         self.video_control.setMaximumHeight(420)
         self.video_experimental.setMaximumHeight(420)
         self.video_control.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.video_experimental.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         self.stim = StimView()
-        self.emg = EmgView()
+        self.imu = ImuView()
         self.controls = Controls(self.bus)
 
-        # --- LEFT: top = two cameras, bottom = controls
         left = QWidget()
         left_layout = QVBoxLayout(left)
         left_layout.setContentsMargins(6, 6, 6, 6)
@@ -76,15 +96,13 @@ class App(QWidget):
         left_layout.addWidget(self.controls, 0)
         left_layout.addStretch(1)
 
-        # --- RIGHT: vertical splitter (stim top, emg bottom)
         right_split = QSplitter(Qt.Orientation.Vertical)
         right_split.addWidget(self.stim)
-        right_split.addWidget(self.emg)
-        right_split.setStretchFactor(0, 4)  # stim больше
-        right_split.setStretchFactor(1, 1)  # emg меньше
+        right_split.addWidget(self.imu)
+        right_split.setStretchFactor(0, 4)
+        right_split.setStretchFactor(1, 1)
         right_split.setSizes([800, 200])
 
-        # --- ROOT: horizontal splitter (left | right) ~50/50
         root_split = QSplitter(Qt.Orientation.Horizontal)
         root_split.addWidget(left)
         root_split.addWidget(right_split)
@@ -96,20 +114,19 @@ class App(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.addWidget(root_split)
 
-        # --- buffers
         self.last_img_control = None
         self.last_pose_control = None
         self.last_img_experimental = None
         self.last_pose_experimental = None
 
-        # --- subscriptions
         self.bus.subscribe("video.frame.control", self._on_video_control)
         self.bus.subscribe("pose.frame.control", self._on_pose_control)
         self.bus.subscribe("video.frame.experimental", self._on_video_experimental)
         self.bus.subscribe("pose.frame.experimental", self._on_pose_experimental)
+        self.bus.subscribe("imu.value.control", self._on_imu_control)
+        self.bus.subscribe("imu.value.experimental", self._on_imu_experimental)
         self.bus.subscribe("stim.params", self._on_stim)
 
-        # --- timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._tick)
         self.timer.start(30)
@@ -126,19 +143,22 @@ class App(QWidget):
     def _on_pose_experimental(self, msg) -> None:
         self.last_pose_experimental = msg.payload
 
+    def _on_imu_control(self, msg) -> None:
+        self.imu.update_control(msg.payload.value)
+
+    def _on_imu_experimental(self, msg) -> None:
+        self.imu.update_experimental(msg.payload.value)
+
     def _on_stim(self, msg) -> None:
         self.stim.update_params(msg.payload)
 
     def _tick(self) -> None:
-        # pipeline
         try:
             self.pipeline.step()
         except Exception as e:
-            # чтобы не падало и не спамило трассами в UI
             print("Pipeline error:", e)
             return
 
-        # draw control
         if self.last_img_control is not None and self.last_pose_control is not None:
             img = draw_pose(
                 self.last_img_control,
@@ -147,7 +167,6 @@ class App(QWidget):
             )
             self.video_control.update_frame(img)
 
-        # draw experimental
         if self.last_img_experimental is not None and self.last_pose_experimental is not None:
             img = draw_pose(
                 self.last_img_experimental,

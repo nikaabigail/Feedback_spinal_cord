@@ -3,17 +3,28 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from PyQt6.QtWidgets import QLabel
-from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtWidgets import QLabel
 
 
 def draw_pose(img: np.ndarray, kxy: np.ndarray, conf: np.ndarray) -> np.ndarray:
     out = img.copy()
+
+    edges = [(0, 1), (1, 2), (2, 3), (4, 5), (5, 6), (6, 7)]
+    if len(kxy) >= 8 and len(conf) >= 8:
+        for a, b in edges:
+            if float(conf[a]) < 0.1 or float(conf[b]) < 0.1:
+                continue
+            p1 = (int(kxy[a][0]), int(kxy[a][1]))
+            p2 = (int(kxy[b][0]), int(kxy[b][1]))
+            cv2.line(out, p1, p2, (255, 200, 0), 2)
+
     for (x, y), c in zip(kxy, conf):
         if float(c) < 0.1:
             continue
         cv2.circle(out, (int(x), int(y)), 4, (0, 255, 0), -1)
+
     return out
 
 
@@ -29,13 +40,8 @@ class VideoView(QLabel):
         super().__init__()
         self.setText("Video stream...")
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # важно: не даем QLabel самому растягивать содержимое
         self.setScaledContents(False)
-
-        # маленький минимум, чтобы layout мог нормально ужимать камеры
         self.setMinimumSize(320, 180)
-
         self._last_pixmap: QPixmap | None = None
 
     def update_frame(self, img_bgr: np.ndarray) -> None:

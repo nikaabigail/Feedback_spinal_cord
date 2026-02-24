@@ -4,12 +4,18 @@
     "width": 1280,
     "height": 720,
     "cameras": [
-      { "name": "control", "index": 0 },
-      { "name": "experimental", "index": 0 }
+      {
+        "name": "control",
+        "index": 0
+      },
+      {
+        "name": "experimental",
+        "index": 0
+      }
     ]
   },
   "pose": {
-    "backend": "yolo_stub"
+    "backend": "dlc_stub"
   },
   "emg": {
     "backend": "mock_emg"
@@ -26,5 +32,9 @@
   },
   "stim": {
     "backend": "mock_stim"
+  },
+  "imu": {
+    "backend": "mock_imu",
+    "smoothing": 0.85
   }
 }

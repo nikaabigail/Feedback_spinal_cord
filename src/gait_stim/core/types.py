@@ -49,3 +49,12 @@ class StimParams:
     frame_id: int
     channels: List[StimChannelParams]
     meta: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ImuSample:
+    ts: Timestamp
+    frame_id: int
+    source: str
+    value: float
+    meta: Dict[str, Any] = field(default_factory=dict)
