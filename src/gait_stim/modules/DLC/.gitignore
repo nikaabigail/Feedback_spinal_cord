@@ -1,19 +1,32 @@
 # DLC heavy artifacts / datasets / videos
-dlc-models/
 evaluation-results/
 labeled-data/
 training-datasets/
 videos/
 
+# dlc-models: ignore everything by default...
+dlc-models/**
+
+# ...but keep ONLY model artifacts (iteration folders)
+!dlc-models/iteration-*/
+!dlc-models/iteration-*/**
+
+# allow typical training snapshots / checkpoints / configs
+!dlc-models/**/train/checkpoint
+!dlc-models/**/train/snapshot*
+!dlc-models/**/train/*.index
+!dlc-models/**/train/*.meta
+!dlc-models/**/train/*.data-*
+!dlc-models/**/train/*.pb
+!dlc-models/**/train/*.h5
+!dlc-models/**/pose_cfg.yaml
+!dlc-models/**/config.yaml
+dlc-models/**/train/log/**
+dlc-models/**/train/learning_stats.csv
+dlc-models/**/train/*.csv
+dlc-models/**/train/log.txt
+dlc-models/**/train/events.out.tfevents.*
+dlc-models/**/train/log/events.out.tfevents.*
 # common junk
 __pycache__/
 *.pyc
-*.pkl
-*.h5
-*.mp4
-*.avi
-*.mov
-*.zip
-*.tar
-*.tar.gz
-*.7z
